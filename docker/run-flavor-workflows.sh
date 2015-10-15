@@ -16,6 +16,18 @@ then
     exit 50
 fi
 
+abspath()
+{
+    if [[ -d "$1" ]]
+    then
+        cd "$1" &> '/dev/null' && echo "$(pwd -P)" && exit 0
+    else 
+        cd &> '/dev/null' "$(dirname "$1")" && echo "$(pwd -P)/$(basename "$1")" && exit 0
+    fi
+
+    exit 30
+}
+
 while [ $# -gt 1 ]
 do
     case $1 in
@@ -38,11 +50,11 @@ do
             ;;
 
         --object-metadata)
-            OBJ_META_DIR="$(readlink -f $2)"
+            OBJ_META_DIR="$(abspath $2)"
             ;;
 
         --object-files)
-            OBJ_FL_DIR="$(readlink -f $2)"
+            OBJ_FL_DIR="$(abspath $2)"
             ;;
 
         --base-uri)
@@ -50,11 +62,11 @@ do
             ;;
 
         --swarchive-storage)
-            SWARCHIVE_STORAGE_DIR="$(readlink -f $2)"
+            SWARCHIVE_STORAGE_DIR="$(abspath $2)"
             ;;
 
         --swarchive-incoming)
-            SWARCHIVE_INCOMING_DIR="$(readlink -f $2)"
+            SWARCHIVE_INCOMING_DIR="$(abspath $2)"
             ;;
  
         *) # DEFAULT
@@ -148,7 +160,6 @@ docker exec -it "$CONTAINER" sed "s#%BASE_URI%#$BASE_URI#g" -i '/home/bwfla/obje
 docker exec -it "$CONTAINER" sed -r 's#(<modify-wsdl-address>).*(</modify-wsdl-address>)#\1true\2#'                            -i '/home/bwfla/appserver/standalone/configuration/standalone.xml'
 docker exec -it "$CONTAINER" sed -r "s#(<wsdl-host>).*(</wsdl-host>)#\1$PUBLIC_IP\2#"                                          -i '/home/bwfla/appserver/standalone/configuration/standalone.xml'
 docker exec -it "$CONTAINER" sed -r "/<modify-wsdl-address>.*<\/modify-wsdl-address>/a \\\\t<wsdl-port>$PUBLIC_PORT</wsdl-port>" -i '/home/bwfla/appserver/standalone/configuration/standalone.xml'
-docker exec -it "$CONTAINER" '/home/bwfla/bwfla-start.sh'
+docker exec -it "$CONTAINER" bash '/home/bwfla/flavor-start'
 
-# docker exec -it "$CONTAINER" bash
 echo "FINISHED!"
