@@ -56,6 +56,8 @@ CONTAINER="bwFLA-Container_$$"
 docker run --privileged=true -p "$PUBLIC_IP:$PUBLIC_PORT:8080" -d $ATTACHMENT --name "$CONTAINER" --net=bridge -it "$DOCKER" bash
 trap releaseContainer EXIT QUIT INT TERM
 
+docker pull "$CONTAINER"
+
 docker exec -it "$CONTAINER" sed -r 's#(<modify-wsdl-address>).*(</modify-wsdl-address>)#\1true\2#'                            -i '/home/bwfla/appserver/standalone/configuration/standalone.xml'
 docker exec -it "$CONTAINER" sed -r "s#(<wsdl-host>).*(</wsdl-host>)#\1$PUBLIC_IP\2#"                                          -i '/home/bwfla/appserver/standalone/configuration/standalone.xml'
 docker exec -it "$CONTAINER" sed -r "/<modify-wsdl-address>.*<\/modify-wsdl-address>/a \\\\t<wsdl-port>$PUBLIC_PORT</wsdl-port>" -i '/home/bwfla/appserver/standalone/configuration/standalone.xml'

@@ -76,6 +76,8 @@ ATTACHMENT="-v $ARCHIVE_DIR:/home/bwfla/image-archive"
 docker run --privileged=true -p "$PUBLIC_IP:$PUBLIC_PORT:8080" -p 10809:10809 -d $ATTACHMENT --name "$CONTAINER" --net=bridge -it "$DOCKER" bash
 trap releaseContainer EXIT QUIT INT TERM
 
+docker pull "$CONTAINER"
+
 docker exec -it "$CONTAINER" sed -r "s#%PUBLIC_IP%#$PUBLIC_IP#"                                                                  -i '/home/bwfla/.bwFLA/ImageArchiveConf.xml'
 
 docker exec -it "$CONTAINER" sed -r 's#(<modify-wsdl-address>).*(</modify-wsdl-address>)#\1true\2#'                              -i '/home/bwfla/appserver/standalone/configuration/standalone.xml'

@@ -77,6 +77,9 @@ do
 done
 
 CONTAINER="bwFLA-Container_${$}"
+
+docker pull "$CONTAINER"
+
 docker run --privileged=true -p "$PUBLIC_IP:$PUBLIC_PORT:8080" -d $ATTACHMENT --name "$CONTAINER" --net=bridge -it "$DOCKER" bash
 trap releaseContainer EXIT QUIT INT TERM
 

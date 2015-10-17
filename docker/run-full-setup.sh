@@ -1,11 +1,10 @@
 #!/bin/bash
-set +x
+set -x
 
 USAGE='MAKE SURE TO USE CORRECT COMMAND-LINE (SET MANDATORY ARGS, ANY SPECIFIED DIRS MUST EXIST)
 ./run-flavor --docker <DOCKER>
              --public-ip-port <PUBLIC_IP:PORT> (PORT >= 8080, DEFAULT: 8080)
-             --image-archive <IMAGE_ARCHIVE>
-             --eaas-gateway <EAAS_GATEWAY>
+             --archive-dir <IMAGE_ARCHIVE>
              [--object-metadata <OBJ_META_DIR>] 
              [--object-files <OBJ_FL_DIR> --base-uri <BASE_URI>]
              [--swarchive-storage <SWARCHIVE_STORAGE_DIR> --swarchive-incoming <SWARCHIVE_INCOMING_DIR>]'
@@ -41,14 +40,10 @@ do
             PUBLIC_PORT=${PUBLIC_IP_PORT[1]}
             ;;
 
-        --image-archive)
-            IMAGE_ARCHIVE="$2"
+	--archive-dir)
+            ARCHIVE_DIR="$(abspath $2)"
             ;;
         
-        --eaas-gateway)
-            EAAS_GATEWAY="$2"
-            ;;
-
         --object-metadata)
             OBJ_META_DIR="$(abspath $2)"
             ;;
@@ -77,7 +72,7 @@ do
     shift 2
 done
 
-if [ -z "$DOCKER" ] || [ -z "$PUBLIC_IP" ] || [ -z "$PUBLIC_PORT" ] || [ -z "$IMAGE_ARCHIVE" ] || [ -z "$EAAS_GATEWAY" ]
+if [ -z "$DOCKER" ] || [ -z "$PUBLIC_IP" ] || [ -z "$PUBLIC_PORT" ] || [ -z "$ARCHIVE_DIR" ]
 then
     echo -e "$USAGE"
     exit 50
@@ -148,15 +143,30 @@ releaseContainer()
 }
 
 CONTAINER="bwFLA-Container_$$"
-docker run --privileged=true -p "$PUBLIC_IP:$PUBLIC_PORT:8080" -d $ATTACHMENT --name "$CONTAINER" --net=bridge -it "$DOCKER" bash
+ATTACHMENT="$ATTACHMENT -v $ARCHIVE_DIR:/home/bwfla/image-archive"
+docker run --privileged=true -p "$PUBLIC_IP:$PUBLIC_PORT:8080" -p 10809:10809 -d $ATTACHMENT --name "$CONTAINER" --net=bridge -it "$DOCKER" bash
 trap releaseContainer EXIT QUIT INT TERM
 
-docker pull "$CONTAINER"
+docker pull "$DOCKER"
 
-docker exec -it "$CONTAINER" sed "s#%IMAGE_ARCHIVE%#$IMAGE_ARCHIVE#g;s#%EAAS_GATEWAY%#$EAAS_GATEWAY#g" -i '/home/bwfla/.bwFLA/WorkflowsConf.xml'
+CPUS=2
+ENDPOINT=$PUBLIC_IP:$PUBLIC_PORT
+NODES="           <node>
+                    <address>http://$ENDPOINT/emucomp</address>
+                    <nodespecs>
+                        <cpucores>$CPUS</cpucores>
+                        <memory>4096</memory>
+                        <disk>100</disk>
+                    </nodespecs>
+                  </node>
+               "
+docker exec -it "$CONTAINER" perl -pe "s#%NODES%#$NODES#g" -i '/home/bwfla/.bwFLA/EaasConf.xml'
+docker exec -it "$CONTAINER" sed -r "s#%PUBLIC_IP%#$PUBLIC_IP#"                                                                  -i '/home/bwfla/.bwFLA/ImageArchiveConf.xml'
+
+docker exec -it "$CONTAINER" sed "s#%IMAGE_ARCHIVE%#$PUBLIC_IP:$PUBLIC_PORT#g;s#%EAAS_GATEWAY%#$PUBLIC_IP:$PUBLIC_PORT#g" -i '/home/bwfla/.bwFLA/WorkflowsConf.xml'
+
 docker exec -it "$CONTAINER" sed "s#%PUBLIC_IP%#$PUBLIC_IP:$PUBLIC_PORT#g" -i '/home/bwfla/.bwFLA/WorkflowsConf.xml'
 docker exec -it "$CONTAINER" sed "s#%BASE_URI%#$BASE_URI#g" -i '/home/bwfla/object-archives/user-objects.json'
-
 
 docker exec -it "$CONTAINER" sed -r 's#(<modify-wsdl-address>).*(</modify-wsdl-address>)#\1true\2#'                            -i '/home/bwfla/appserver/standalone/configuration/standalone.xml'
 docker exec -it "$CONTAINER" sed -r "s#(<wsdl-host>).*(</wsdl-host>)#\1$PUBLIC_IP\2#"                                          -i '/home/bwfla/appserver/standalone/configuration/standalone.xml'
