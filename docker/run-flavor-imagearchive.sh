@@ -1,5 +1,5 @@
 #!/bin/bash
-#set -x
+set -x
 
 USAGE='MAKE SURE TO USE CORRECT COMMAND-LINE (SET MANDATORY ARGS, ANY SPECIFIED DIRS MUST EXIST)
 ./run-flavor-imagearchive --docker <DOCKER> 
@@ -71,12 +71,12 @@ releaseContainer()
     return $RET
 }
 
+docker pull "$DOCKER"
 CONTAINER="bwFLA-Container_$$"
 ATTACHMENT="-v $ARCHIVE_DIR:/home/bwfla/image-archive"
 docker run --privileged=true -p "$PUBLIC_IP:$PUBLIC_PORT:8080" -p 10809:10809 -d $ATTACHMENT --name "$CONTAINER" --net=bridge -it "$DOCKER" bash
 trap releaseContainer EXIT QUIT INT TERM
 
-docker pull "$CONTAINER"
 
 docker exec -it "$CONTAINER" sed -r "s#%PUBLIC_IP%#$PUBLIC_IP#"                                                                  -i '/home/bwfla/.bwFLA/ImageArchiveConf.xml'
 

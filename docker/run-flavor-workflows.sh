@@ -147,11 +147,11 @@ releaseContainer()
     return $RET
 }
 
+docker pull "$DOCKER"
 CONTAINER="bwFLA-Container_$$"
 docker run --privileged=true -p "$PUBLIC_IP:$PUBLIC_PORT:8080" -d $ATTACHMENT --name "$CONTAINER" --net=bridge -it "$DOCKER" bash
 trap releaseContainer EXIT QUIT INT TERM
 
-docker pull "$CONTAINER"
 
 docker exec -it "$CONTAINER" sed "s#%IMAGE_ARCHIVE%#$IMAGE_ARCHIVE#g;s#%EAAS_GATEWAY%#$EAAS_GATEWAY#g" -i '/home/bwfla/.bwFLA/WorkflowsConf.xml'
 docker exec -it "$CONTAINER" sed "s#%PUBLIC_IP%#$PUBLIC_IP:$PUBLIC_PORT#g" -i '/home/bwfla/.bwFLA/WorkflowsConf.xml'
