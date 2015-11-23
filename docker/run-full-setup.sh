@@ -142,12 +142,12 @@ releaseContainer()
     return $RET
 }
 
+docker pull "$DOCKER"
 CONTAINER="bwFLA-Container_$$"
 ATTACHMENT="$ATTACHMENT -v $ARCHIVE_DIR:/home/bwfla/image-archive"
 docker run --privileged=true -p "$PUBLIC_IP:$PUBLIC_PORT:8080" -p 10809:10809 -d $ATTACHMENT --name "$CONTAINER" --net=bridge -it "$DOCKER" bash
 trap releaseContainer EXIT QUIT INT TERM
 
-docker pull "$DOCKER"
 
 CPUS=2
 ENDPOINT=$PUBLIC_IP:$PUBLIC_PORT
